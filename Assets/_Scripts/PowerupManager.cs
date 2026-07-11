@@ -25,6 +25,7 @@ public class PowerupManager : MonoBehaviour
 
     public void ActivatePowerup(PowerupType type)
     {
+        Debug.Log($"ActivatePowerup called with type: {type}");
         switch (type)
         {
             case PowerupType.DoubleBall:
@@ -80,7 +81,9 @@ public class PowerupManager : MonoBehaviour
 
     private IEnumerator ScalePaddle(float multiplier, float duration)
     {
+        Debug.Log($"ScalePaddle running. Original: {originalPaddleScale}, target: {originalPaddleScale * multiplier}");
         paddle.localScale = new Vector3(originalPaddleScale.x * multiplier, originalPaddleScale.y, originalPaddleScale.z);
+        Debug.Log($"Paddle scale after set: {paddle.localScale}");
         yield return new WaitForSeconds(duration);
         paddle.localScale = originalPaddleScale;
         paddleScaleRoutine = null;
