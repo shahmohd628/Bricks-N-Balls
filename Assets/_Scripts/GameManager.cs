@@ -7,11 +7,12 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private int startingLives = 3;
     [SerializeField] private GameObject ballPrefab;
-    [SerializeField] private Transform ballSpawnPoint;
+    [SerializeField] private Transform paddle;
 
     private int score;
     private int lives;
     private int bricksRemaining;
+    private BallController pendingBall;
 
     private void Awake() => Instance = this;
 
@@ -20,6 +21,22 @@ public class GameManager : MonoBehaviour
         lives = startingLives;
         UIManager.Instance.UpdateScore(score);
         UIManager.Instance.UpdateLives(lives);
+        SpawnBallOnPaddle();
+    }
+
+    private void SpawnBallOnPaddle()
+    {
+        GameObject ballObj = Instantiate(ballPrefab, paddle.position, Quaternion.identity);
+        BallController ball = ballObj.GetComponent<BallController>();
+        ball.AttachToPaddle(paddle);
+        pendingBall = ball;
+    }
+
+    public void TryLaunchPendingBall()
+    {
+        if (pendingBall == null) return;
+        pendingBall.Launch();
+        pendingBall = null;
     }
 
     public void AddScore(int amount)
@@ -38,37 +55,25 @@ public class GameManager : MonoBehaviour
 
     public void LoseBall(GameObject ball)
     {
+        BallController[] allBalls = FindObjectsByType<BallController>(FindObjectsSortMode.None);
+        int remainingAfterThis = allBalls.Length - 1; // this ball is about to be destroyed
+
         Destroy(ball);
 
-        BallController[] balls =
-            FindObjectsByType<BallController>(FindObjectsSortMode.None);
-
-        int remaining = 0;
-
-        foreach (BallController b in balls)
-        {
-            if (b.gameObject != ball)
-                remaining++;
-        }
-
-        if (remaining > 0)
-            return;
+        if (remainingAfterThis > 0) return; // other balls still in play, no life lost
 
         lives--;
-
         UIManager.Instance.UpdateLives(lives);
 
         if (lives <= 0)
-        {
             UIManager.Instance.ShowLoseScreen();
-            return;
-        }
-
-        Instantiate(ballPrefab,
-            ballSpawnPoint.position,
-            Quaternion.identity);
+        else
+            SpawnBallOnPaddle();
     }
 
-    public void RestartLevel() => SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    public void Menu() => SceneManager.LoadScene("Menu");
+    public void RestartLevel()
+    {
+        Time.timeScale = 1f; // must un-pause before loading, or the new scene loads frozen
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
 }

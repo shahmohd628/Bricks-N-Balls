@@ -7,7 +7,11 @@ public class PowerupManager : MonoBehaviour
 
     [SerializeField] private GameObject ballPrefab;
     [SerializeField] private Transform paddle;
-    [SerializeField] private float powerupDuration = 6f;
+
+    [Header("Durations (seconds) — DoubleBall has none, it's permanent")]
+    [SerializeField] private float paddleGrowDuration = 4f;
+    [SerializeField] private float paddleShrinkDuration = 4f;
+    [SerializeField] private float slowDownDuration = 4f;
 
     private Vector3 originalPaddleScale;
     private Coroutine paddleScaleRoutine;
@@ -32,11 +36,11 @@ public class PowerupManager : MonoBehaviour
                 break;
             case PowerupType.PaddleGrow:
                 if (paddleScaleRoutine != null) StopCoroutine(paddleScaleRoutine);
-                paddleScaleRoutine = StartCoroutine(ScalePaddle(1.5f));
+                paddleScaleRoutine = StartCoroutine(ScalePaddle(1.5f, paddleGrowDuration));
                 break;
             case PowerupType.PaddleShrink:
                 if (paddleScaleRoutine != null) StopCoroutine(paddleScaleRoutine);
-                paddleScaleRoutine = StartCoroutine(ScalePaddle(0.6f));
+                paddleScaleRoutine = StartCoroutine(ScalePaddle(0.6f, paddleShrinkDuration));
                 break;
         }
     }
@@ -46,25 +50,39 @@ public class PowerupManager : MonoBehaviour
         BallController[] existing = FindObjectsByType<BallController>(FindObjectsSortMode.None);
         if (existing.Length == 0) return;
 
-        GameObject clone = Instantiate(ballPrefab, existing[0].transform.position, Quaternion.identity);
-        clone.GetComponent<BallController>().Launch();
+        BallController source = existing[0];
+        if (!source.IsLaunched) return;
+
+        Vector2 sourceDir = source.GetComponent<Rigidbody2D>().linearVelocity.normalized;
+
+        float splitAngle = Random.Range(25f, 50f);
+        Vector2 dirA = Quaternion.Euler(0, 0, splitAngle / 2f) * sourceDir;
+        Vector2 dirB = Quaternion.Euler(0, 0, -splitAngle / 2f) * sourceDir;
+
+        source.Redirect(dirA);
+
+        GameObject clone = Instantiate(ballPrefab, source.transform.position, Quaternion.identity);
+        clone.GetComponent<BallController>().LaunchInDirection(dirB, source.CurrentSpeed);
     }
 
     private IEnumerator SlowDownBalls()
     {
         foreach (var b in FindObjectsByType<BallController>(FindObjectsSortMode.None))
-            b.SetSpeed(b.CurrentSpeed * 0.5f);
+            b.SetSpeed(b.BaseSpeed * 0.5f);
 
-        yield return new WaitForSeconds(powerupDuration);
+        yield return new WaitForSeconds(slowDownDuration);
 
         foreach (var b in FindObjectsByType<BallController>(FindObjectsSortMode.None))
-            b.SetSpeed(b.CurrentSpeed * 2f);
+            b.SetSpeed(b.BaseSpeed);
+
+        slowDownRoutine = null;
     }
 
-    private IEnumerator ScalePaddle(float multiplier)
+    private IEnumerator ScalePaddle(float multiplier, float duration)
     {
         paddle.localScale = new Vector3(originalPaddleScale.x * multiplier, originalPaddleScale.y, originalPaddleScale.z);
-        yield return new WaitForSeconds(powerupDuration);
+        yield return new WaitForSeconds(duration);
         paddle.localScale = originalPaddleScale;
+        paddleScaleRoutine = null;
     }
 }

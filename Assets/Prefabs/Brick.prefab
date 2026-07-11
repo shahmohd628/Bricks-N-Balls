@@ -181,4 +181,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Brick
   hitPoints: 1
   destroyEffect: {fileID: 0}
-  powerupDropChance: 0.2
+  minDropChance: 0
+  maxDropChance: 0.8

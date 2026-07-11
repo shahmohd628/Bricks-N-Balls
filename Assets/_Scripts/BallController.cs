@@ -1,130 +1,169 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))]
 public class BallController : MonoBehaviour
 {
-    [Header("Movement")]
     [SerializeField] private float baseSpeed = 8f;
+    [SerializeField] private float maxBounceAngleFromPaddle = 60f;
+    [SerializeField] private float paddleJitterDegrees = 4f;
+    [SerializeField] private float wallJitterDegrees = 6f;
+    [SerializeField] private float minBounceComponent = 0.25f; // stops near-parallel wall skimming
+    [SerializeField] private float attachOffsetY = 0.45f;
 
-    [Header("Paddle")]
-    [SerializeField] private float maxBounceAngle = 70f;
+    private Rigidbody2D rb;
+    private float currentSpeed;
+    private bool isLaunched;
+    private Transform attachedPaddle;
 
-    [Header("Safety")]
-    [SerializeField] private float minY = 0.25f;
-    [SerializeField] private float randomBounce = 2f;
-
-    Rigidbody2D rb;
-    float currentSpeed;
-
+    public bool IsLaunched => isLaunched;
     public float CurrentSpeed => currentSpeed;
+    public float BaseSpeed => baseSpeed;
 
-    void Awake()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
     }
 
-    void Start()
+    private void Start()
     {
         currentSpeed = baseSpeed;
-        Launch();
     }
 
-    void FixedUpdate()
+    private void Update()
     {
-        if (rb.linearVelocity.sqrMagnitude < 0.01f)
+        if (!isLaunched && attachedPaddle != null)
         {
-            Launch();
+            transform.position = new Vector3(
+                attachedPaddle.position.x,
+                attachedPaddle.position.y + attachOffsetY,
+                transform.position.z);
             return;
         }
 
-        rb.linearVelocity =
-            rb.linearVelocity.normalized * currentSpeed;
+        if (!isLaunched) return;
+
+        // Self-checked bottom loss — no trigger collider involved, so nothing to misconfigure.
+        if (transform.position.y < -ScreenBounds.HalfHeight - 1f)
+        {
+            GameManager.Instance.LoseBall(gameObject);
+            return;
+        }       
+
+        // Safety net: if a collision response ever leaves the ball nearly stopped, nudge it.
+        if (rb.linearVelocity.magnitude < 0.5f)
+        {
+            Vector2 nudge = Random.insideUnitCircle.normalized;
+            if (nudge.y < 0.3f) nudge.y = 0.3f;
+            rb.linearVelocity = nudge.normalized * currentSpeed;
+        }
+    }
+
+    public void AttachToPaddle(Transform paddle)
+    {
+        attachedPaddle = paddle;
+        isLaunched = false;
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.linearVelocity = Vector2.zero;
+        currentSpeed = baseSpeed;
     }
 
     public void Launch()
     {
         float angle = Random.Range(-25f, 25f);
-
-        Vector2 dir =
-            Quaternion.Euler(0,0,angle) * Vector2.up;
-
-        rb.linearVelocity =
-            dir.normalized * currentSpeed;
+        Vector2 dir = Quaternion.Euler(0, 0, angle) * Vector2.up;
+        LaunchInDirection(dir, currentSpeed);
     }
 
-    public void SetSpeed(float speed)
+    public void LaunchInDirection(Vector2 direction, float speed)
     {
+        attachedPaddle = null;
+        isLaunched = true;
         currentSpeed = speed;
-        rb.linearVelocity =
-            rb.linearVelocity.normalized * currentSpeed;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        rb.linearVelocity = direction.normalized * currentSpeed;
     }
 
-    void OnCollisionEnter2D(Collision2D collision)
+    public void SetSpeed(float newSpeed)
     {
-        ContactPoint2D contact = collision.GetContact(0);
+        currentSpeed = newSpeed;
+        if (isLaunched)
+            rb.linearVelocity = rb.linearVelocity.normalized * currentSpeed;
+    }
+    public void Redirect(Vector2 newDirection)
+    {
+        rb.linearVelocity = newDirection.normalized * currentSpeed;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (!isLaunched) return;
 
         if (collision.collider.CompareTag("Paddle"))
         {
-            PaddleBounce(collision.collider);
-
-            if(AudioManager.Instance!=null)
-                AudioManager.Instance.PlayPaddleBounce();
-
+            HandlePaddleBounce(collision.collider);
+            AudioManager.Instance.PlayPaddleBounce();
             return;
         }
 
-        Vector2 dir =
-            Vector2.Reflect(
-                rb.linearVelocity.normalized,
-                contact.normal);
-
-        if (collision.collider.CompareTag("Brick"))
+        WallBounceSurface wall = collision.collider.GetComponent<WallBounceSurface>();
+        if (wall != null)
         {
-            dir =
-                Quaternion.Euler(
-                    0,
-                    0,
-                    Random.Range(-randomBounce, randomBounce))
-                * dir;
+            HandleWallBounce(wall.orientation);
+            return;
         }
 
-        if (Mathf.Abs(dir.y) < minY)
-        {
-            dir.y = Mathf.Sign(dir.y == 0 ? 1 : dir.y) * minY;
-            dir.Normalize();
-        }
-
-        rb.position += contact.normal * 0.02f;
-
-        rb.linearVelocity =
-            dir.normalized * currentSpeed;
+        // Everything else (bricks) — a clean, physically accurate mirror reflection, no jitter.
+        HandleMirrorBounce(collision);
     }
 
-    void PaddleBounce(Collider2D paddle)
+    private void HandlePaddleBounce(Collider2D paddle)
     {
-        float half =
-            paddle.bounds.extents.x;
+        float paddleHalfWidth = paddle.bounds.extents.x;
+        float offset = (transform.position.x - paddle.transform.position.x) / paddleHalfWidth;
+        offset = Mathf.Clamp(offset, -1f, 1f);
 
-        float offset =
-            (transform.position.x -
-             paddle.transform.position.x) / half;
+        float angle = offset * maxBounceAngleFromPaddle;
+        angle += Random.Range(-paddleJitterDegrees, paddleJitterDegrees);
 
-        offset = Mathf.Clamp(offset,-1f,1f);
+        Vector2 dir = Quaternion.Euler(0, 0, angle) * Vector2.up;
+        rb.linearVelocity = dir.normalized * currentSpeed;
+    }
 
-        float angle =
-            offset * maxBounceAngle;
+    private void HandleWallBounce(WallOrientation orientation)
+    {
+        Vector2 v = rb.linearVelocity.sqrMagnitude > 0.01f
+            ? rb.linearVelocity.normalized
+            : Vector2.up;
 
-        Vector2 dir =
-            Quaternion.Euler(0,0,angle) *
-            Vector2.up;
+        if (orientation == WallOrientation.Vertical)
+            v.x = -v.x;
+        else
+            v.y = -v.y;
 
-        if (Mathf.Abs(dir.y) < minY)
+        float jitter = Random.Range(-wallJitterDegrees, wallJitterDegrees);
+        v = (Quaternion.Euler(0, 0, jitter) * v).normalized;
+
+        if (orientation == WallOrientation.Vertical && Mathf.Abs(v.x) < minBounceComponent)
         {
-            dir.y = minY;
-            dir.Normalize();
+            // Push away from whichever side wall we're near, based on the ball's own position
+            float pushSign = transform.position.x > 0f ? -1f : 1f;
+            v.x = pushSign * minBounceComponent;
+        }
+        else if (orientation == WallOrientation.Horizontal && Mathf.Abs(v.y) < minBounceComponent)
+        {
+            v.y = -minBounceComponent; // top wall always sends the ball back down
         }
 
-        rb.linearVelocity =
-            dir.normalized * currentSpeed;
+        rb.linearVelocity = v.normalized * currentSpeed;
+    }
+
+    private void HandleMirrorBounce(Collision2D collision)
+    {
+        Vector2 normal = collision.GetContact(0).normal;
+        Vector2 incoming = rb.linearVelocity.sqrMagnitude > 0.01f
+            ? rb.linearVelocity.normalized
+            : -normal;
+
+        Vector2 reflectDir = Vector2.Reflect(incoming, normal).normalized;
+        rb.linearVelocity = reflectDir * currentSpeed;
     }
 }

@@ -14,6 +14,16 @@ public class UIManager : MonoBehaviour
 
     public void UpdateScore(int score) => scoreText.text = $"Score: {score}";
     public void UpdateLives(int lives) => livesText.text = $"Lives: {lives}";
-    public void ShowWinScreen() => winPanel.SetActive(true);
-    public void ShowLoseScreen() => losePanel.SetActive(true);
+
+    public void ShowWinScreen()
+    {
+        winPanel.SetActive(true);
+        Time.timeScale = 0f;
+    }
+
+    public void ShowLoseScreen()
+    {
+        losePanel.SetActive(true);
+        Time.timeScale = 0f;
+    }
 }

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2768783083944945562}
   - component: {fileID: 724680563469936798}
   - component: {fileID: 810599982565251362}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Ball
   m_TagString: Ball
   m_Icon: {fileID: 0}
@@ -170,6 +170,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BallController
   baseSpeed: 8
-  maxBounceAngle: 70
-  minY: 0.25
-  randomBounce: 2
+  maxBounceAngleFromPaddle: 60
+  paddleJitterDegrees: 4
+  wallJitterDegrees: 6
+  minBounceComponent: 0.25
+  attachOffsetY: 0.45
