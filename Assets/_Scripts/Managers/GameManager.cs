@@ -45,6 +45,12 @@ public class GameManager : MonoBehaviour
         UIManager.Instance.UpdateScore(score);
     }
 
+    public void AddLife()
+    {
+        lives++;
+        UIManager.Instance.UpdateLives(lives);
+    }
+
     public void SetTotalBricks(int count) => bricksRemaining = count;
 
     public void BrickDestroyed()
@@ -56,11 +62,11 @@ public class GameManager : MonoBehaviour
     public void LoseBall(GameObject ball)
     {
         BallController[] allBalls = FindObjectsByType<BallController>(FindObjectsSortMode.None);
-        int remainingAfterThis = allBalls.Length - 1; // this ball is about to be destroyed
+        int remainingAfterThis = allBalls.Length - 1; // this ball hasn't actually been destroyed yet
 
         Destroy(ball);
 
-        if (remainingAfterThis > 0) return; // other balls still in play, no life lost
+        if (remainingAfterThis > 0) return;
 
         lives--;
         UIManager.Instance.UpdateLives(lives);
@@ -73,7 +79,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartLevel()
     {
-        Time.timeScale = 1f; // must un-pause before loading, or the new scene loads frozen
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

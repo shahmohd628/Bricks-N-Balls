@@ -6,7 +6,7 @@ public class BallController : MonoBehaviour
     [SerializeField] private float maxBounceAngleFromPaddle = 60f;
     [SerializeField] private float paddleJitterDegrees = 4f;
     [SerializeField] private float wallJitterDegrees = 6f;
-    [SerializeField] private float minBounceComponent = 0.25f; // stops near-parallel wall skimming
+    [SerializeField] private float minBounceComponent = 0.25f;
     [SerializeField] private float attachOffsetY = 0.45f;
 
     private Rigidbody2D rb;
@@ -41,14 +41,13 @@ public class BallController : MonoBehaviour
 
         if (!isLaunched) return;
 
-        // Self-checked bottom loss — no trigger collider involved, so nothing to misconfigure.
+        // Self-checked bottom loss — works at any orthographic size/aspect ratio.
         if (transform.position.y < -ScreenBounds.HalfHeight - 1f)
         {
             GameManager.Instance.LoseBall(gameObject);
             return;
-        }       
+        }
 
-        // Safety net: if a collision response ever leaves the ball nearly stopped, nudge it.
         if (rb.linearVelocity.magnitude < 0.5f)
         {
             Vector2 nudge = Random.insideUnitCircle.normalized;
@@ -88,6 +87,8 @@ public class BallController : MonoBehaviour
         if (isLaunched)
             rb.linearVelocity = rb.linearVelocity.normalized * currentSpeed;
     }
+
+    // Used by the 2x-ball split so both balls visibly separate.
     public void Redirect(Vector2 newDirection)
     {
         rb.linearVelocity = newDirection.normalized * currentSpeed;
@@ -111,7 +112,6 @@ public class BallController : MonoBehaviour
             return;
         }
 
-        // Everything else (bricks) — a clean, physically accurate mirror reflection, no jitter.
         HandleMirrorBounce(collision);
     }
 
@@ -144,13 +144,12 @@ public class BallController : MonoBehaviour
 
         if (orientation == WallOrientation.Vertical && Mathf.Abs(v.x) < minBounceComponent)
         {
-            // Push away from whichever side wall we're near, based on the ball's own position
             float pushSign = transform.position.x > 0f ? -1f : 1f;
             v.x = pushSign * minBounceComponent;
         }
         else if (orientation == WallOrientation.Horizontal && Mathf.Abs(v.y) < minBounceComponent)
         {
-            v.y = -minBounceComponent; // top wall always sends the ball back down
+            v.y = -minBounceComponent;
         }
 
         rb.linearVelocity = v.normalized * currentSpeed;

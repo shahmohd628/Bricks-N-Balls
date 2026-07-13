@@ -12,8 +12,8 @@ public class UIManager : MonoBehaviour
 
     private void Awake() => Instance = this;
 
-    public void UpdateScore(int score) => scoreText.text = $"Score: {score}";
-    public void UpdateLives(int lives) => livesText.text = $"Lives: {lives}";
+    public void UpdateScore(int score) => scoreText.text = score.ToString();
+    public void UpdateLives(int lives) => livesText.text = lives.ToString();
 
     public void ShowWinScreen()
     {
