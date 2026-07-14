@@ -180,8 +180,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Brick
   brickType: 0
-  destroyEffect: {fileID: 0}
+  destroyEffect: {fileID: 377242692384146854, guid: 7dd316d805ca45f4a9321043d400cf18, type: 3}
   explosionRadius: 0
+  explosionVfxPrefab: {fileID: 0}
   crackStages: []
   minDropChance: 0
   maxDropChance: 0.8

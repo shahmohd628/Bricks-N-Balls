@@ -183,7 +183,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Brick
   brickType: 3
   destroyEffect: {fileID: 0}
-  explosionRadius: 1.5
+  explosionRadius: 0.5
+  explosionVfxPrefab: {fileID: 377242692384146854, guid: cd566c90b45e7a446b624aea32161cd3, type: 3}
   crackStages:
   - {fileID: 8858536322616693555}
   - {fileID: 8463588708302069336}

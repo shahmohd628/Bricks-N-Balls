@@ -7,6 +7,7 @@ public class Brick : MonoBehaviour
     [SerializeField] private BrickType brickType = BrickType.Normal;
     [SerializeField] private GameObject destroyEffect;
     [SerializeField] private float explosionRadius = 1.2f;
+    [SerializeField] private GameObject explosionVfxPrefab;
 
     [Header("Crack-stage children")]
     [SerializeField] private GameObject[] crackStages;
@@ -99,6 +100,9 @@ public class Brick : MonoBehaviour
 
     private void TriggerExplosion()
     {
+        if (explosionVfxPrefab != null)
+            Instantiate(explosionVfxPrefab, transform.position, Quaternion.identity);
+
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, explosionRadius);
         foreach (var hit in hits)
         {
@@ -106,7 +110,7 @@ public class Brick : MonoBehaviour
 
             Brick neighbor = hit.GetComponent<Brick>();
             if (neighbor != null)
-                neighbor.DestroyByExplosion(); // works on Normal, Strong, or Steel neighbors
+                neighbor.DestroyByExplosion();
         }
     }
 
