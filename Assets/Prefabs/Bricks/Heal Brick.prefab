@@ -179,7 +179,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecfdbc36a47726c44920a57381b75183, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Brick
-  brickType: 0
+  brickType: 4
   destroyEffect: {fileID: 377242692384146854, guid: 7dd316d805ca45f4a9321043d400cf18, type: 3}
   explosionRadius: 0
   explosionVfxPrefab: {fileID: 0}

@@ -76,13 +76,13 @@ public class Brick : MonoBehaviour
 
     private void BreakBrick()
     {
+        AudioManager.Instance.PlayBrickBreak();
         if (isDestroyed) return;
         isDestroyed = true;
 
         if (destroyEffect != null)
             Instantiate(destroyEffect, transform.position, Quaternion.identity);
 
-        AudioManager.Instance.PlayBrickBreak();
 
         if (brickType == BrickType.Explosive)
             TriggerExplosion();
